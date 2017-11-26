@@ -8,6 +8,55 @@ runtime: shiny
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+library(flexdashboard)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(stringr)
+library(plyr)
+
+us_tweets <- read_csv("us_tweets.csv") 
+
+us_tweets$tweet_content_stripped <- gsub("[^[:alpha:] ]", "",
+                                         us_tweets$tweet_content) 
+
+us_tweets$tweet_content_stripped <- gsub(" *\\b[[:alpha:]]{1,2}\\b *", " ",
+                                         us_tweets$tweet_content_stripped) 
+
+#currently keeping untidy
+#us_tweets_long <- gather(us_tweets, key = sentiment, value = count, anger:trust, factor_key = TRUE)
+
+#fix location where recorded as city, state
+tweets_shiny = us_tweets %>%
+  filter(country == "US") %>%
+  mutate(state = str_sub(place_as_appears_on_bio, start = -2)) 
+
+#fix location where recorded as state, USA 
+state_fix = tweets_shiny %>%
+  filter(state == "SA") %>%
+  mutate(fixed_state = NA)
+
+
+list = strsplit(state_fix$place_as_appears_on_bio, split=',', fixed=TRUE)
+df <- ldply(list)
+colnames(df) <- c("State", "USA")
+
+state_fix = state_fix %>%
+  mutate(fixed_state = df$State) %>%
+  mutate(fixed_state = state.abb[match(fixed_state,state.name)]) 
+ 
+#join both datasets, merges states for one state column
+state_fix$fixed_state[is.na(state_fix$fixed_state)] <- "DC"
+tweets_shiny$state[tweets_shiny$state == "SA"] <- NA
+tweets_shiny = full_join(tweets_shiny, state_fix) %>%
+  mutate(state = ifelse(is.na(state), fixed_state, state)) %>%
+  select(-fixed_state )
+
+#expectation: 50 states + DC, reality: too many observations, how do we best clean up location?
+length(unique(tweets_shiny$state))
+unique(tweets_shiny$state)
+
 ```
 
 This R Markdown document is made interactive using Shiny. Unlike the more traditional workflow of creating static reports, you can now create documents that allow your readers to change the assumptions underlying your analysis and see the results immediately. 
