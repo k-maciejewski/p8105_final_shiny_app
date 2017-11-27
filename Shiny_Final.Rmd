@@ -27,6 +27,13 @@ us_tweets$tweet_content_stripped <- gsub(" *\\b[[:alpha:]]{1,2}\\b *", " ",
 #currently keeping untidy
 #us_tweets_long <- gather(us_tweets, key = sentiment, value = count, anger:trust, factor_key = TRUE)
 
+#filtering based on character count- creating NA's for overly long location strings, good idea?
+# tidy_state = us_tweets %>%
+  # filter(country == "US") %>%
+  # mutate(length = nchar(place_as_appears_on_bio)) %>%
+  # arrange(length) %>%
+  # mutate(is.na(place_as_appears_on_bio) <- place_as_appears_on_bio == "_________")
+
 #fix location where recorded as city, state
 tweets_shiny = us_tweets %>%
   filter(country == "US") %>%
