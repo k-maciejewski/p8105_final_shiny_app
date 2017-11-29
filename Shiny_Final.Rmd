@@ -24,45 +24,52 @@ us_tweets$tweet_content_stripped <- gsub("[^[:alpha:] ]", "",
 us_tweets$tweet_content_stripped <- gsub(" *\\b[[:alpha:]]{1,2}\\b *", " ",
                                          us_tweets$tweet_content_stripped) 
 
-#currently keeping untidy
-#us_tweets_long <- gather(us_tweets, key = sentiment, value = count, anger:trust, factor_key = TRUE)
+state_tweets = us_tweets %>%
+  select("longitude", "latitude")
 
-#filtering based on character count- creating NA's for overly long location strings, good idea?
-# tidy_state = us_tweets %>%
-  # filter(country == "US") %>%
-  # mutate(length = nchar(place_as_appears_on_bio)) %>%
-  # arrange(length) %>%
-  # mutate(is.na(place_as_appears_on_bio) <- place_as_appears_on_bio == "_________")
+library(sp)
+library(maps)
+library(maptools)
+library(gpclib)
+library(stringi)
 
-#fix location where recorded as city, state
-tweets_shiny = us_tweets %>%
-  filter(country == "US") %>%
-  mutate(state = str_sub(place_as_appears_on_bio, start = -2)) 
+latlong2state <- function(state_tweets) {
+    states <- map('state', fill=TRUE, col="transparent", plot=FALSE)
+    IDs <- sapply(strsplit(states$names, ":"), function(x) x[1])
+    states_sp <- map2SpatialPolygons(states, IDs=IDs,
+                     proj4string=CRS("+proj=longlat +datum=WGS84"))
 
-#fix location where recorded as state, USA 
-state_fix = tweets_shiny %>%
-  filter(state == "SA") %>%
-  mutate(fixed_state = NA)
+    states_tweets_SP <- SpatialPoints(state_tweets, 
+                    proj4string=CRS("+proj=longlat +datum=WGS84"))
+    
+    indices <- over(states_tweets_SP, states_sp)
+
+    stateNames <- sapply(states_sp@polygons, function(x) x@ID)
+    stateNames[indices]
+}
+
+us_tweets$state_name <- stri_trans_totitle(latlong2state(state_tweets))
 
 
-list = strsplit(state_fix$place_as_appears_on_bio, split=',', fixed=TRUE)
-df <- ldply(list)
-colnames(df) <- c("State", "USA")
-
-state_fix = state_fix %>%
-  mutate(fixed_state = df$State) %>%
-  mutate(fixed_state = state.abb[match(fixed_state,state.name)]) 
+#tidy: long form
+us_tweets_long <- gather(us_tweets, key = sentiment, value = count, anger:trust, factor_key = TRUE)
  
-#join both datasets, merges states for one state column
-state_fix$fixed_state[is.na(state_fix$fixed_state)] <- "DC"
-tweets_shiny$state[tweets_shiny$state == "SA"] <- NA
-tweets_shiny = full_join(tweets_shiny, state_fix) %>%
-  mutate(state = ifelse(is.na(state), fixed_state, state)) %>%
-  select(-fixed_state )
 
-#expectation: 50 states + DC, reality: too many observations, how do we best clean up location?
-length(unique(tweets_shiny$state))
-unique(tweets_shiny$state)
+#dataset to plot
+tweets_shiny = us_tweets_long %>%
+  filter(country == "US") 
+
+library(flexdashboard)
+library(forcats)
+library(tidyverse)
+library(dplyr)
+library(readr)
+library(plotly)
+library(janitor)
+library(shiny)
+library(stringr)
+
+
 
 ```
 
@@ -74,22 +81,23 @@ To learn more, see [Interactive Documents](http://rmarkdown.rstudio.com/authorin
 
 You can embed Shiny inputs and outputs in your document. Outputs are automatically updated whenever inputs change.  This demonstrates how a standard R plot can be made interactive by wrapping it in the Shiny `renderPlot` function. The `selectInput` and `sliderInput` functions create the input widgets used to drive the plot.
 
-```{r eruptions, echo=FALSE}
-inputPanel(
-  selectInput("n_breaks", label = "Number of bins:",
-              choices = c(10, 20, 35, 50), selected = 20),
-  
-  sliderInput("bw_adjust", label = "Bandwidth adjustment:",
-              min = 0.2, max = 2, value = 1, step = 0.2)
-)
+```{r sentiment by state, echo=FALSE}
+which_state = tweets_shiny %>% distinct(state_name) %>% pull()
 
-renderPlot({
-  hist(faithful$eruptions, probability = TRUE, breaks = as.numeric(input$n_breaks),
-       xlab = "Duration (minutes)", main = "Geyser eruption duration")
-  
-  dens <- density(faithful$eruptions, adjust = input$bw_adjust)
-  lines(dens, col = "blue")
+
+# selectInput widget
+selectInput("state_choice1", label = h3("Select first state"),
+            choices = which_state, selected = "New York")
+
+renderPlotly({
+    tweets_shiny %>%
+    filter(count > 0, state_name == input$state_choice1)%>%
+  mutate(text_label = str_c("sentiment: ", sentiment, '\nlocation: ', place_as_appears_on_bio)) %>% 
+  plot_ly(x = ~longitude, y = ~latitude, type = "scatter", mode = "markers",
+          alpha = 0.5, 
+          color = ~sentiment, text = ~text_label)
 })
+
 ```
 
 ## Embedded Application
@@ -111,5 +119,31 @@ You can also use the `shinyApp` function to define an application inline rather 
 
 In all of R code chunks above the `echo = FALSE` attribute is used. This is to prevent the R code within the chunk from rendering in the document alongside the Shiny components.
 
+```{r, eval= FALSE, echo= FALSE}
+##CODE TO OBTAIN STATE FROM PACE AS APPEARS ON BIO
+
+#fix location where recorded as state, USA
+state_fix = tweets_shiny %>%
+  filter(state == "SA") %>%
+  mutate(fixed_state = NA)
 
 
+list = strsplit(state_fix$place_as_appears_on_bio, split=',', fixed=TRUE)
+df <- ldply(list)
+colnames(df) <- c("State", "USA")
+
+state_fix = state_fix %>%
+  mutate(fixed_state = df$State) %>%
+  mutate(fixed_state = state.abb[match(fixed_state,state.name)])
+
+#join both datasets, merges states for one state column
+state_fix$fixed_state[is.na(state_fix$fixed_state)] <- "DC"
+tweets_shiny$state[tweets_shiny$state == "SA"] <- NA
+tweets_shiny = full_join(tweets_shiny, state_fix) %>%
+  mutate(state = ifelse(is.na(state), fixed_state, state)) %>%
+  select(-fixed_state )
+
+#expectation: 50 states + DC, reality: too many observations, how do we best clean up location?
+length(unique(tweets_shiny$state))
+unique(tweets_shiny$state)
+```
