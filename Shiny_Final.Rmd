@@ -6,7 +6,7 @@ output: html_document
 runtime: shiny
 ---
 
-```{r setup, include=FALSE}
+```{r setting up dataset, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(flexdashboard)
@@ -15,6 +15,12 @@ library(tidyr)
 library(readr)
 library(stringr)
 library(plyr)
+library(forcats)
+library(tidyverse)
+library(plotly)
+library(janitor)
+library(shiny)
+
 
 us_tweets <- read_csv("us_tweets.csv") 
 
@@ -24,6 +30,8 @@ us_tweets$tweet_content_stripped <- gsub("[^[:alpha:] ]", "",
 us_tweets$tweet_content_stripped <- gsub(" *\\b[[:alpha:]]{1,2}\\b *", " ",
                                          us_tweets$tweet_content_stripped) 
 
+
+#getting state from latitude longitude data
 state_tweets = us_tweets %>%
   select("longitude", "latitude")
 
@@ -48,8 +56,56 @@ latlong2state <- function(state_tweets) {
     stateNames[indices]
 }
 
-us_tweets$state_name <- stri_trans_totitle(latlong2state(state_tweets))
 
+us_tweets$state_name <- stri_trans_totitle(latlong2state(state_tweets))
+```
+
+```{r, decreasing missingness}
+
+#PARSING TO DECREASE STATE MISSINGNESS
+us_tweets = us_tweets %>%
+  filter(country == "US") %>%
+  mutate(state = str_sub(place_as_appears_on_bio, start = -2), state = trimws(state)) 
+
+#formatting place that was state, USA
+state_fix = us_tweets %>%
+  filter(state == "SA") %>%
+  mutate(fixed_state = NA)
+
+
+list = strsplit(state_fix$place_as_appears_on_bio, split=',', fixed=TRUE)
+df <- ldply(list)
+colnames(df) <- c("State", "USA")
+
+#state name
+state_fix = state_fix %>%
+  mutate(state = trimws(state), fixed_state = df$State, fixed_state = trimws(fixed_state)) %>%
+  mutate(fixed_state = state.abb[match(fixed_state,state.name)]) %>%
+  mutate(fixed_state = state.name[match(fixed_state,state.abb)])
+
+#add district of columbia
+state_fix$fixed_state[is.na(state_fix$fixed_state)] <- "District of Columbia"
+
+#fix SA of USA to be NA
+us_tweets$state[us_tweets$state == "SA"] <- NA
+
+#join datasets and keep most comprehensive
+us_tweets = full_join(us_tweets, state_fix)%>%
+  mutate(updated_state = ifelse(is.na(state), fixed_state, state)) %>%
+  mutate(updated_state = state.name[match(updated_state,state.abb)]) %>%
+  mutate(updated2_state = ifelse(is.na(fixed_state), updated_state,
+                                 fixed_state)) %>%
+  select(-state, -fixed_state, -updated_state) %>%
+  mutate(final_state = ifelse(is.na(state_name), updated2_state,
+                                 state_name)) %>%
+  select(-state_name, -updated2_state)
+  
+
+
+
+```
+
+```{r, further tidying}
 
 #tidy: long form
 us_tweets_long <- gather(us_tweets, key = sentiment, value = count, anger:trust, factor_key = TRUE)
@@ -57,19 +113,7 @@ us_tweets_long <- gather(us_tweets, key = sentiment, value = count, anger:trust,
 
 #dataset to plot
 tweets_shiny = us_tweets_long %>%
-  filter(country == "US") 
-
-library(flexdashboard)
-library(forcats)
-library(tidyverse)
-library(dplyr)
-library(readr)
-library(plotly)
-library(janitor)
-library(shiny)
-library(stringr)
-
-
+  filter(country == "US")
 
 ```
 
