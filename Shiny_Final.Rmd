@@ -60,7 +60,7 @@ latlong2state <- function(state_tweets) {
 us_tweets$state_name <- stri_trans_totitle(latlong2state(state_tweets))
 ```
 
-```{r, decreasing missingness}
+```{r, decreasing missingness, include = FALSE}
 
 #PARSING TO DECREASE STATE MISSINGNESS
 us_tweets = us_tweets %>%
@@ -105,7 +105,7 @@ us_tweets = full_join(us_tweets, state_fix)%>%
 
 ```
 
-```{r, further tidying}
+```{r, further tidying, include = FALSE}
 
 #tidy: long form
 us_tweets_long <- gather(us_tweets, key = sentiment, value = count, anger:trust, factor_key = TRUE)
@@ -113,7 +113,8 @@ us_tweets_long <- gather(us_tweets, key = sentiment, value = count, anger:trust,
 
 #dataset to plot
 tweets_shiny = us_tweets_long %>%
-  filter(country == "US")
+  filter(country == "US") %>%
+  drop_na(final_state)
 
 ```
 
@@ -126,7 +127,7 @@ To learn more, see [Interactive Documents](http://rmarkdown.rstudio.com/authorin
 You can embed Shiny inputs and outputs in your document. Outputs are automatically updated whenever inputs change.  This demonstrates how a standard R plot can be made interactive by wrapping it in the Shiny `renderPlot` function. The `selectInput` and `sliderInput` functions create the input widgets used to drive the plot.
 
 ```{r sentiment by state, echo=FALSE}
-which_state = tweets_shiny %>% distinct(state_name) %>% pull()
+which_state = tweets_shiny %>% distinct(final_state) %>% pull()
 
 
 # selectInput widget
@@ -135,7 +136,7 @@ selectInput("state_choice1", label = h3("Select first state"),
 
 renderPlotly({
     tweets_shiny %>%
-    filter(count > 0, state_name == input$state_choice1)%>%
+    filter(count > 0, final_state == input$state_choice1)%>%
   mutate(text_label = str_c("sentiment: ", sentiment, '\nlocation: ', place_as_appears_on_bio)) %>% 
   plot_ly(x = ~longitude, y = ~latitude, type = "scatter", mode = "markers",
           alpha = 0.5, 
