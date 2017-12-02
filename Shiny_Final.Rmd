@@ -89,7 +89,7 @@ state_fix$fixed_state[is.na(state_fix$fixed_state)] <- "District of Columbia"
 #fix SA of USA to be NA
 us_tweets$state[us_tweets$state == "SA"] <- NA
 
-#join datasets and keep most comprehensive
+#join datasets and ifelse to keep state name for most comprehensive set
 us_tweets = full_join(us_tweets, state_fix)%>%
   mutate(updated_state = ifelse(is.na(state), fixed_state, state)) %>%
   mutate(updated_state = state.name[match(updated_state,state.abb)]) %>%
@@ -164,31 +164,3 @@ You can also use the `shinyApp` function to define an application inline rather 
 
 In all of R code chunks above the `echo = FALSE` attribute is used. This is to prevent the R code within the chunk from rendering in the document alongside the Shiny components.
 
-```{r, eval= FALSE, echo= FALSE}
-##CODE TO OBTAIN STATE FROM PACE AS APPEARS ON BIO
-
-#fix location where recorded as state, USA
-state_fix = tweets_shiny %>%
-  filter(state == "SA") %>%
-  mutate(fixed_state = NA)
-
-
-list = strsplit(state_fix$place_as_appears_on_bio, split=',', fixed=TRUE)
-df <- ldply(list)
-colnames(df) <- c("State", "USA")
-
-state_fix = state_fix %>%
-  mutate(fixed_state = df$State) %>%
-  mutate(fixed_state = state.abb[match(fixed_state,state.name)])
-
-#join both datasets, merges states for one state column
-state_fix$fixed_state[is.na(state_fix$fixed_state)] <- "DC"
-tweets_shiny$state[tweets_shiny$state == "SA"] <- NA
-tweets_shiny = full_join(tweets_shiny, state_fix) %>%
-  mutate(state = ifelse(is.na(state), fixed_state, state)) %>%
-  select(-fixed_state )
-
-#expectation: 50 states + DC, reality: too many observations, how do we best clean up location?
-length(unique(tweets_shiny$state))
-unique(tweets_shiny$state)
-```
