@@ -143,6 +143,26 @@ renderPlotly({
           color = ~sentiment, text = ~text_label)
 })
 
+
+
+renderPlotly({
+    tweets_shiny %>%
+    filter(count > 0, final_state == input$state_choice1)%>%
+  mutate(text_label = str_c("sentiment: ", sentiment, '\nlocation: ', place_as_appears_on_bio)) %>% 
+  plot_ly(x = ~longitude, y = ~latitude, type = "scatter", mode = "markers",
+          alpha = 0.5, 
+          color = ~sentiment, text = ~text_label)
+})
+
+renderPlotly({
+tweets_shiny %>%
+  filter(count > 0, final_state == input$state_choice1) %>%
+  group_by(sentiment) %>%
+  summarize(sent_count = sum(count)) %>%
+  mutate(sentiment = fct_reorder(sentiment, sent_count)) %>%
+  top_n(15) %>%
+  plot_ly(x = ~sentiment, y = ~sent_count, type = "bar")
+})
 ```
 
 ## Embedded Application
