@@ -125,10 +125,10 @@ ui <- fluidPage(
    titlePanel("State Comparisons"),
    
    # Sidebar with a slider input for number of bins 
-   #sidebarLayout(
+   sidebarLayout(
       
-   #sidebarPanel(
-   fluidRow(splitLayout(
+   sidebarPanel(
+     #splitLayout(
         selectInput("state_choice1", label = h3("Select first state"),
                     choices = which_state, selected = "New York")
         ,
@@ -136,14 +136,26 @@ ui <- fluidPage(
         selectInput("state_choice2", label = h3("Select second state"),
                   choices = which_state, selected = "New Jersey"), width = 2
       )
-      ),
+   )
+   
+   
+   
+      #)
+
       # Show a plot of the generated distribution
-      #mainPanel(
+      fluidRow(
+   mainPanel(
       splitLayout(
          plotlyOutput("state1"), plotlyOutput("state2")
-      )
-)
+      ),
 
+  splitLayout (
+    plotlyOutput("state1bar"), plotlyOutput("state2bar")
+    
+  )
+)
+)
+)
 server <- function(input, output) {
    
    output$state1 <- renderPlotly({
@@ -152,8 +164,7 @@ server <- function(input, output) {
        mutate(text_label = str_c("sentiment: ", sentiment, '\nlocation: ', place_as_appears_on_bio)) %>% 
        plot_ly(x = ~longitude, y = ~latitude, type = "scatter", mode = "markers",
                alpha = 0.5, 
-               color = ~sentiment, text = ~text_label, colors = "Set3")
-               #marker = list(color = brewer.pal(8, "Set3")))
+               color = ~sentiment, text = ~text_label)
    })
    output$state2 <- renderPlotly({
      tweets_shiny %>%
@@ -163,7 +174,26 @@ server <- function(input, output) {
                alpha = 0.5, 
                color = ~sentiment, text = ~text_label)
    })
-   
+   output$state1bar <- renderPlotly({
+     tweets_shiny %>%
+       filter(final_state == input$state_choice1) %>%
+       group_by(sentiment) %>%
+       summarize(sent_count = sum(count)) %>%
+       mutate(sentiment = fct_reorder(sentiment, sent_count, .desc = TRUE)) %>%
+       arrange(desc(sent_count)) %>%
+       top_n(15) %>%
+       plot_ly(x = ~sentiment, y = ~sent_count, type = "bar")
+   })
+   output$state2bar <-  renderPlotly({
+     tweets_shiny %>%
+       filter(final_state == input$state_choice2) %>%
+       group_by(sentiment) %>%
+       summarize(sent_count = sum(count)) %>%
+       mutate(sentiment = fct_reorder(sentiment, sent_count, .desc = TRUE)) %>%
+       arrange(desc(sent_count)) %>%
+       top_n(15) %>%
+       plot_ly(x = ~sentiment, y = ~sent_count, type = "bar")
+   })
    
 }
 

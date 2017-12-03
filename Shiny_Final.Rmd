@@ -160,6 +160,7 @@ renderPlotly({
   filter(final_state == input$state_choice1) %>%
   group_by(sentiment) %>%
   summarize(sent_count = sum(count)) %>%
+    mutate(sentiment = fct_reorder(sentiment, sent_count, .desc = TRUE)) %>%
   arrange(desc(sent_count)) %>%
   top_n(15) %>%
   plot_ly(x = ~sentiment, y = ~sent_count, type = "bar")
