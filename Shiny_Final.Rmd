@@ -14,7 +14,6 @@ library(dplyr)
 library(tidyr)
 library(readr)
 library(stringr)
-library(plyr)
 library(forcats)
 library(tidyverse)
 library(plotly)
@@ -74,7 +73,7 @@ state_fix = us_tweets %>%
 
 
 list = strsplit(state_fix$place_as_appears_on_bio, split=',', fixed=TRUE)
-df <- ldply(list)
+df <- plyr::ldply(list)
 colnames(df) <- c("State", "USA")
 
 #state name
@@ -147,12 +146,21 @@ renderPlotly({
           color = ~sentiment, text = ~text_label)
 })
 
-renderPlotly({
-tweets_shiny %>%
-  filter(count > 0, final_state == input$state_choice1) %>%
+for_bar_plot =  tweets_shiny %>%
+  filter(final_state == "Florida") %>%
   group_by(sentiment) %>%
   summarize(sent_count = sum(count)) %>%
-  mutate(sentiment = fct_reorder(sentiment, sent_count)) %>%
+  arrange(desc(sent_count)) %>%
+  top_n(15) %>%
+  plot_ly(x = ~sentiment, y = ~sent_count, type = "bar")
+
+######BAR PLOT FOR STATE 1 INPUT#######
+renderPlotly({
+  tweets_shiny %>%
+  filter(final_state == input$state_choice1) %>%
+  group_by(sentiment) %>%
+  summarize(sent_count = sum(count)) %>%
+  arrange(desc(sent_count)) %>%
   top_n(15) %>%
   plot_ly(x = ~sentiment, y = ~sent_count, type = "bar")
 })
