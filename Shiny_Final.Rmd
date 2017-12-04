@@ -1,7 +1,5 @@
 ---
-title: "Shiny_Final"
-author: "Kaitlin Maciejewski"
-date: "11/20/2017"
+title: "State Sentiments"
 output: html_document
 runtime: shiny
 ---
