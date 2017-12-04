@@ -146,11 +146,11 @@ ui <- fluidPage(
       fluidRow(
    mainPanel(
       splitLayout(
-         plotlyOutput("state1"), plotlyOutput("state2")
+         plotlyOutput("state1"), plotlyOutput("state1bar")
       ),
 
   splitLayout (
-    plotlyOutput("state1bar"), plotlyOutput("state2bar")
+    plotlyOutput("state2"), plotlyOutput("state2bar")
     
   )
 )
