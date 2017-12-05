@@ -1,5 +1,7 @@
 ---
-title: "State Sentiments"
+title: "Shiny_Final"
+author: "Kaitlin Maciejewski"
+date: "11/20/2017"
 output: html_document
 runtime: shiny
 ---
@@ -116,15 +118,12 @@ tweets_shiny = us_tweets_long %>%
 ##overlaying points onto state map
 #load us map data
 all_states <- map_data("state")
-#plot all states with ggplot
-# p <- ggplot()
-# p <- p + geom_polygon( data=all_states, aes(x=long, y=lat, group = group),colour="white", fill="grey10" )
+
 
 #subsetting to get state specific
-states <- subset(all_states, final_state %in% "California" )
+states <- subset(all_states, region %in% "california" )
 
-p <- p + geom_polygon(data = states, aes(x=long, y=lat, group = group),colour="white", fill="grey10" )
-p <- p + geom_point( data=tweets_shiny, aes(x=longitude, y=latitude))
+plot = ggplot() + geom_polygon(data = states, aes(x=long, y=lat, group = group),colour="white", fill="grey10" ) + geom_point( data=tweets_shiny, aes(x=longitude, y=latitude, color = sentiment, alpha = .1))
 
 
 ```
