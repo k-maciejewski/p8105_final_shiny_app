@@ -115,11 +115,26 @@ tweets_shiny = us_tweets_long %>%
   filter(country == "US") %>%
   drop_na(final_state)
 
+##overlaying points onto state map
+#load us map data
+all_states <- map_data("state")
+#plot all states with ggplot
+# p <- ggplot()
+# p <- p + geom_polygon( data=all_states, aes(x=long, y=lat, group = group),colour="white", fill="grey10" )
+
+#subsetting to get state specific
+states <- subset(all_states, final_state %in% "California" )
+
+p <- p + geom_polygon(data = states, aes(x=long, y=lat, group = group),colour="white", fill="grey10" )
+p <- p + geom_point( data=tweets_shiny, aes(x=longitude, y=latitude))
+
+
 ```
 
 
 ```{r sentiment by state, echo=FALSE}
-which_state = tweets_shiny %>% distinct(final_state) %>% pull()
+which_state = tweets_shiny %>% distinct(final_state) %>% 
+  pull() %>% as.character() %>% sort()
 
 
 # selectInput widget
@@ -129,7 +144,7 @@ selectInput("state_choice1", label = h3("Select first state"),
 renderPlotly({
     tweets_shiny %>%
     filter(count > 0, final_state == input$state_choice1)%>%
-  mutate(text_label = str_c("sentiment: ", sentiment, '\nlocation: ', place_as_appears_on_bio)) %>% 
+  mutate(text_label = str_c("sentiment: ", sentiment, '\nlocation: ', place_as_appears_on_bio)) %>%
   plot_ly(x = ~longitude, y = ~latitude, type = "scatter", mode = "markers",
           alpha = 0.5, 
           color = ~sentiment, text = ~text_label)
@@ -146,13 +161,7 @@ renderPlotly({
           color = ~sentiment, text = ~text_label)
 })
 
-for_bar_plot =  tweets_shiny %>%
-  filter(final_state == "Florida") %>%
-  group_by(sentiment) %>%
-  summarize(sent_count = sum(count)) %>%
-  arrange(desc(sent_count)) %>%
-  top_n(15) %>%
-  plot_ly(x = ~sentiment, y = ~sent_count, type = "bar")
+
 
 ######BAR PLOT FOR STATE 1 INPUT#######
 renderPlotly({
@@ -163,7 +172,14 @@ renderPlotly({
     mutate(sentiment = fct_reorder(sentiment, sent_count, .desc = TRUE)) %>%
   arrange(desc(sent_count)) %>%
   top_n(15) %>%
-  plot_ly(x = ~sentiment, y = ~sent_count, type = "bar")
+  plot_ly(x = ~sentiment, y = ~sent_count, type = "bar", color = ~sentiment)
+})
+
+
+
+
+renderPlotly({
+  ggplotly() + geom_polygon(data = states, aes(x=long, y=lat, group = group),colour="white", fill="grey10" ) + geom_point( data=tweets_shiny, aes(x=longitude, y=latitude))
 })
 ```
 

@@ -20,6 +20,12 @@ library(plotly)
 library(RColorBrewer)
 library(janitor)
 library(shiny)
+library(ggplot2)
+library(maps)
+library(maptools)
+library(gpclib)
+library(stringi)
+library(sp)
 
 
 us_tweets <- read_csv("us_tweets.csv") 
@@ -35,11 +41,7 @@ us_tweets$tweet_content_stripped <- gsub(" *\\b[[:alpha:]]{1,2}\\b *", " ",
 state_tweets = us_tweets %>%
   select("longitude", "latitude")
 
-library(sp)
-library(maps)
-library(maptools)
-library(gpclib)
-library(stringi)
+
 
 latlong2state <- function(state_tweets) {
   states <- map('state', fill=TRUE, col="transparent", plot=FALSE)
