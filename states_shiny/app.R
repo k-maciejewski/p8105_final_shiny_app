@@ -123,8 +123,12 @@ ui <- fluidPage(
    )
    ,
    # Application title
-   titlePanel("State Comparisons")),
-   
+  
+   mainPanel(titlePanel("State Comparisons"),
+                img(src = 'twitter.png', align = "center" , width = 180, height = 190))
+   )
+   )
+   ,
       # Show a plot of the generated distribution
       fluidRow(splitLayout(
          plotlyOutput("state1"), plotlyOutput("state1bar")
@@ -135,7 +139,6 @@ ui <- fluidPage(
         )
    )
     
-)
 )
 )
 
