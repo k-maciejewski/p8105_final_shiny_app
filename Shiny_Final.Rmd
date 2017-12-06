@@ -186,4 +186,6 @@ renderPlotly({
 })
 ```
 
+INPUT PICTURE
 
+![Caption for the picture.]("./screenshot.png")
