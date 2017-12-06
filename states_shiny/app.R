@@ -13,7 +13,6 @@ library(dplyr)
 library(tidyr)
 library(readr)
 library(stringr)
-library(plyr)
 library(forcats)
 library(tidyverse)
 library(plotly)
@@ -75,10 +74,10 @@ state_fix = us_tweets %>%
 
 
 list = strsplit(state_fix$place_as_appears_on_bio, split=',', fixed=TRUE)
-df <- ldply(list)
+df <- plyr::ldply(list)
 colnames(df) <- c("State", "USA")
 
-#state name
+#fixing state name to be formatted correctly
 state_fix = state_fix %>%
   mutate(state = trimws(state), fixed_state = df$State, fixed_state = trimws(fixed_state)) %>%
   mutate(fixed_state = state.abb[match(fixed_state,state.name)]) %>%
@@ -113,51 +112,46 @@ tweets_shiny = us_tweets_long %>%
   drop_na(final_state)
 
 
-which_state = tweets_shiny %>% distinct(final_state) %>% pull()
-
-
-
+which_state = tweets_shiny %>% distinct(final_state) %>% 
+  pull() %>% as.character() %>% sort()
 
 
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
    
-   # Application title
-   titlePanel("State Comparisons"),
-   
    # Sidebar with a slider input for number of bins 
-   sidebarLayout(
-      
-   sidebarPanel(
-     #splitLayout(
+   fluidRow(sidebarLayout(sidebarPanel(
         selectInput("state_choice1", label = h3("Select first state"),
                     choices = which_state, selected = "New York")
         ,
         
         selectInput("state_choice2", label = h3("Select second state"),
-                  choices = which_state, selected = "New Jersey"), width = 2
-      )
+                  choices = which_state, selected = "New Jersey")
    )
+   ,
+   # Application title
+   titlePanel("State Comparisons")),
    
-   
-   
-      #)
-
       # Show a plot of the generated distribution
-      fluidRow(
-   mainPanel(
-      splitLayout(
+      fluidRow(splitLayout(
          plotlyOutput("state1"), plotlyOutput("state1bar")
-      ),
+      )),
+   fluidRow(splitLayout(
 
-  splitLayout (
-    plotlyOutput("state2"), plotlyOutput("state2bar")
+    splitLayout(plotlyOutput("state2"), plotlyOutput("state2bar")
+        )
+   )
     
-  )
 )
 )
 )
+
+
+
+
+
+
 server <- function(input, output) {
    
    output$state1 <- renderPlotly({
@@ -178,23 +172,23 @@ server <- function(input, output) {
    })
    output$state1bar <- renderPlotly({
      tweets_shiny %>%
-       filter(final_state == input$state_choice1) %>%
+       filter(final_state == input$state_choice1)%>%
        group_by(sentiment) %>%
        summarize(sent_count = sum(count)) %>%
-       mutate(sentiment = fct_reorder(sentiment, sent_count, .desc = TRUE)) %>%
-       arrange(desc(sent_count)) %>%
+       mutate(sentiment = as.factor(sentiment), sentiment = fct_reorder(sentiment, sent_count, .desc = TRUE))%>%
+       arrange(sent_count) %>%
        top_n(15) %>%
-       plot_ly(x = ~sentiment, y = ~sent_count, type = "bar")
+       plot_ly(x = ~sentiment, y = ~sent_count, type = "bar", color = ~sentiment)
    })
    output$state2bar <-  renderPlotly({
      tweets_shiny %>%
-       filter(final_state == input$state_choice2) %>%
+       filter(final_state == input$state_choice2)%>%
        group_by(sentiment) %>%
        summarize(sent_count = sum(count)) %>%
-       mutate(sentiment = fct_reorder(sentiment, sent_count, .desc = TRUE)) %>%
-       arrange(desc(sent_count)) %>%
+       mutate(sentiment = as.factor(sentiment), sentiment = fct_reorder(sentiment, sent_count, .desc = TRUE))%>%
+       arrange(sent_count) %>%
        top_n(15) %>%
-       plot_ly(x = ~sentiment, y = ~sent_count, type = "bar")
+       plot_ly(x = ~sentiment, y = ~sent_count, type = "bar", color = ~sentiment)
    })
    
 }

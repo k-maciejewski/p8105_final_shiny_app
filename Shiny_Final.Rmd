@@ -113,19 +113,25 @@ us_tweets_long <- gather(us_tweets, key = sentiment, value = count, anger:trust,
 #dataset to plot
 tweets_shiny = us_tweets_long %>%
   filter(country == "US") %>%
+  mutate(sentiment = as.character(sentiment)) %>%
   drop_na(final_state)
 
 ##overlaying points onto state map
 #load us map data
 all_states <- map_data("state")
+all_states$region = Hmisc::capitalize(all_states$region)
 
 
 #subsetting to get state specific
-states <- subset(all_states, region %in% "california" )
+state1 <- subset(all_states, region == input$state_choice1)
+state2 <- subest(al_states, region == onpit$state_choice2)
 
-plot = ggplot() + geom_polygon(data = states, aes(x=long, y=lat, group = group),colour="white", fill="grey10" ) + geom_point( data=tweets_shiny, aes(x=longitude, y=latitude, color = sentiment, alpha = .1))
+plot = ggplot() + geom_polygon(data = states, aes(x=long, y=lat, group = group),colour="white", fill="grey10" ) + geom_point( data=tweets_shiny, aes(x=longitude, y=latitude, color = sentiment, size = .1))
 
-
+#subetting to state choice
+tweet_state1 = tweets_shiny %>%
+  filter(count > 0, final_state == input$state_choice1) %>%
+  
 ```
 
 
@@ -162,12 +168,12 @@ renderPlotly({
 
 ######BAR PLOT FOR STATE 1 INPUT#######
 renderPlotly({
-  tweets_shiny %>%
-  filter(final_state == input$state_choice1) %>%
+  tweets = tweets_shiny %>%
+  filter(final_state == "California")%>%
   group_by(sentiment) %>%
   summarize(sent_count = sum(count)) %>%
-    mutate(sentiment = fct_reorder(sentiment, sent_count, .desc = TRUE)) %>%
-  arrange(desc(sent_count)) %>%
+  mutate(sentiment = as.factor(sentiment), sentiment = fct_reorder(sentiment, sent_count, .desc = TRUE))%>%
+  arrange(sent_count) %>%
   top_n(15) %>%
   plot_ly(x = ~sentiment, y = ~sent_count, type = "bar", color = ~sentiment)
 })
@@ -176,7 +182,7 @@ renderPlotly({
 
 
 renderPlotly({
-  ggplotly() + geom_polygon(data = states, aes(x=long, y=lat, group = group),colour="white", fill="grey10" ) + geom_point( data=tweets_shiny, aes(x=longitude, y=latitude))
+  ggplotly() + geom_polygon(data = state1, aes(x=long, y=lat, group = group),colour="white", fill="grey10" ) + geom_point( data=tweet_state1, aes(x=longitude, y=latitude, color = sentiment, size = .01))
 })
 ```
 
