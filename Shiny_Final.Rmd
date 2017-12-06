@@ -21,13 +21,13 @@ library(janitor)
 library(shiny)
 
 
-us_tweets <- read_csv("us_tweets.csv") 
+us_tweets <- read_csv("us_tweets_smaller.csv") 
 
-us_tweets$tweet_content_stripped <- gsub("[^[:alpha:] ]", "",
-                                         us_tweets$tweet_content) 
+#us_tweets$tweet_content_stripped <- gsub("[^[:alpha:] ]", "",
+                                        # us_tweets$tweet_content) 
 
-us_tweets$tweet_content_stripped <- gsub(" *\\b[[:alpha:]]{1,2}\\b *", " ",
-                                         us_tweets$tweet_content_stripped) 
+#us_tweets$tweet_content_stripped <- gsub(" *\\b[[:alpha:]]{1,2}\\b *", " ",
+                                         #us_tweets$tweet_content_stripped) 
 
 
 #getting state from latitude longitude data

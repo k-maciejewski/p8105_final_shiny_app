@@ -1,0 +1,12 @@
+name: states_shiny
+title: states_shiny
+username:
+account: np2547
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 244987
+bundleId: 1119073
+url: https://np2547.shinyapps.io/states_shiny/
+when: 1512578429.97675
+asMultiple: FALSE
+asStatic: FALSE

@@ -27,20 +27,12 @@ library(stringi)
 library(sp)
 
 
-us_tweets <- read_csv("us_tweets.csv") 
-
-us_tweets$tweet_content_stripped <- gsub("[^[:alpha:] ]", "",
-                                         us_tweets$tweet_content) 
-
-us_tweets$tweet_content_stripped <- gsub(" *\\b[[:alpha:]]{1,2}\\b *", " ",
-                                         us_tweets$tweet_content_stripped) 
+us_tweets <- read_csv("us_tweets_smaller.csv") 
 
 
-#getting state from latitude longitude data
+#function to load state name from latitude and longitude
 state_tweets = us_tweets %>%
   select("longitude", "latitude")
-
-
 
 latlong2state <- function(state_tweets) {
   states <- map('state', fill=TRUE, col="transparent", plot=FALSE)
@@ -57,39 +49,39 @@ latlong2state <- function(state_tweets) {
   stateNames[indices]
 }
 
-
 us_tweets$state_name <- stri_trans_totitle(latlong2state(state_tweets))
 
 
 
-#PARSING TO DECREASE STATE MISSINGNESS
+#start parsing to decrease missingness: filter to US, extract last 2 indices into a new state column
 us_tweets = us_tweets %>%
   filter(country == "US") %>%
   mutate(state = str_sub(place_as_appears_on_bio, start = -2), state = trimws(state)) 
 
-#formatting place that was state, USA
+#place formatting was not uniform across dataset: look at strings that are SA (of USA) to evaluate how to get the most information out of it
 state_fix = us_tweets %>%
   filter(state == "SA") %>%
   mutate(fixed_state = NA)
 
 
+#split place into state and USA
 list = strsplit(state_fix$place_as_appears_on_bio, split=',', fixed=TRUE)
 df <- plyr::ldply(list)
 colnames(df) <- c("State", "USA")
 
-#fixing state name to be formatted correctly
+#trim white space, format state to be in correct full state name format
 state_fix = state_fix %>%
   mutate(state = trimws(state), fixed_state = df$State, fixed_state = trimws(fixed_state)) %>%
   mutate(fixed_state = state.abb[match(fixed_state,state.name)]) %>%
   mutate(fixed_state = state.name[match(fixed_state,state.abb)])
 
-#add district of columbia
+#add district of columbia- not originally included as a state
 state_fix$fixed_state[is.na(state_fix$fixed_state)] <- "District of Columbia"
 
 #fix SA of USA to be NA
 us_tweets$state[us_tweets$state == "SA"] <- NA
 
-#join datasets and keep most comprehensive
+#join datasets and keep most comprehensive state(if one is na, input this, otherwise keep old value, until one column is comprised of all state info across all columns)
 us_tweets = full_join(us_tweets, state_fix)%>%
   mutate(updated_state = ifelse(is.na(state), fixed_state, state)) %>%
   mutate(updated_state = state.name[match(updated_state,state.abb)]) %>%
@@ -102,7 +94,7 @@ us_tweets = full_join(us_tweets, state_fix)%>%
 
 
 
-#tidy: long form
+#tidy into long form
 us_tweets_long <- gather(us_tweets, key = sentiment, value = count, anger:trust, factor_key = TRUE)
 
 
@@ -111,7 +103,7 @@ tweets_shiny = us_tweets_long %>%
   filter(country == "US") %>%
   drop_na(final_state)
 
-
+#pull state for input drop down
 which_state = tweets_shiny %>% distinct(final_state) %>% 
   pull() %>% as.character() %>% sort()
 
